@@ -98,6 +98,12 @@ interface FlowPlan {
   order_bump_medias?: string[]
 }
 
+interface UpsellPlan {
+  id: string
+  buttonText: string
+  price: number
+}
+
 interface UpsellSequence {
   id: string
   name: string
@@ -106,8 +112,7 @@ interface UpsellSequence {
   sendTiming: "immediate" | "custom"
   sendDelayValue?: number
   sendDelayUnit?: "minutes" | "hours" | "days"
-  price: number
-  acceptButtonText: string
+  plans: UpsellPlan[]
   rejectButtonText: string
   hideRejectButton: boolean
   deliveryType: "global" | "custom"
@@ -126,6 +131,12 @@ interface UpsellConfig {
   customDelivery?: string
 }
 
+interface DownsellPlan {
+  id: string
+  buttonText: string
+  price: number
+}
+
 interface DownsellSequence {
   id: string
   message: string
@@ -133,7 +144,9 @@ interface DownsellSequence {
   sendTiming: "immediate" | "custom"
   sendDelayValue?: number
   sendDelayUnit?: "minutes" | "hours" | "days"
-  price: number
+  plans: DownsellPlan[]
+  rejectButtonText: string
+  hideRejectButton: boolean
   deliveryType: "global" | "custom"
   customDelivery?: string
   targetType: "geral" | "pix" // geral = todos, pix = apenas quem gerou pix mas nao pagou
@@ -876,8 +889,7 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
       sendTiming: "immediate",
       sendDelayValue: 30,
       sendDelayUnit: "minutes",
-      price: 0,
-      acceptButtonText: "Quero essa oferta!",
+      plans: [{ id: `plan-${Date.now()}`, buttonText: "Quero essa oferta!", price: 0 }],
       rejectButtonText: "Nao tenho interesse",
       hideRejectButton: false,
       deliveryType: "global",
@@ -980,21 +992,23 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
   
   // Add downsell sequence
   const handleAddDownsellSequence = () => {
-  if (downsellSequences.length >= 20) return
-  const newSequence: DownsellSequence = {
-  id: `ds-seq-${Date.now()}`,
-  message: "",
-  medias: [],
-  sendTiming: "immediate",
-  sendDelayValue: 30,
-  sendDelayUnit: "minutes",
-  price: 0,
-  deliveryType: "global",
-  targetType: downsellSubTab === "pix" ? "pix" : "geral", // Usa a aba atual como targetType
-  }
-  setDownsellSequences([...downsellSequences, newSequence])
-  setExpandedDownsellSequence(newSequence.id)
-  setHasChanges(true)
+    if (downsellSequences.length >= 20) return
+    const newSequence: DownsellSequence = {
+      id: `ds-seq-${Date.now()}`,
+      message: "",
+      medias: [],
+      sendTiming: "immediate",
+      sendDelayValue: 30,
+      sendDelayUnit: "minutes",
+      plans: [{ id: `plan-${Date.now()}`, buttonText: "Quero essa oferta!", price: 0 }],
+      rejectButtonText: "Nao tenho interesse",
+      hideRejectButton: false,
+      deliveryType: "global",
+      targetType: downsellSubTab === "pix" ? "pix" : "geral",
+    }
+    setDownsellSequences([...downsellSequences, newSequence])
+    setExpandedDownsellSequence(newSequence.id)
+    setHasChanges(true)
   }
 
   // Remove downsell sequence
@@ -2389,25 +2403,6 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
                                 </div>
                               )}
 
-                              {/* Preco */}
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <DollarSign className="h-4 w-4" />
-                                  <span>Preco:</span>
-                                </div>
-                                <div className="relative">
-                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={seq.price === 0 ? "" : seq.price}
-                                    onChange={(e) => handleUpdateUpsellSequence(seq.id, "price", e.target.value === "" ? 0 : parseFloat(e.target.value))}
-                                    className="w-32 pl-10 bg-secondary/50 border-border/50"
-                                    placeholder="0,00"
-                                  />
-                                </div>
-                              </div>
                             </div>
 
                             {/* Mensagem */}
@@ -2425,37 +2420,100 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
 
                             <div className="border-t border-border/50 pt-4" />
 
-                            {/* Botoes de Aceitar/Recusar */}
+                            {/* Planos do Upsell */}
                             <div className="space-y-3">
-                              <h4 className="font-medium">Botoes de Acao</h4>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label className="text-sm text-muted-foreground">Botao Aceitar</Label>
-                                  <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-3">
-                                    <Check className="h-4 w-4 text-emerald-500" />
-                                    <Input
-                                      value={seq.acceptButtonText}
-                                      onChange={(e) => handleUpdateUpsellSequence(seq.id, "acceptButtonText", e.target.value)}
-                                      className="bg-transparent border-0 p-0 h-auto focus-visible:ring-0"
-                                    />
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium">Planos</h4>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    const newPlan = { id: `plan-${Date.now()}`, buttonText: "Novo plano", price: 0 }
+                                    handleUpdateUpsellSequence(seq.id, "plans", [...(seq.plans || []), newPlan])
+                                  }}
+                                  className="h-8"
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Adicionar Plano
+                                </Button>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Adicione os planos que serao exibidos como botoes para o usuario escolher.
+                              </p>
+                              <div className="space-y-3">
+                                {(seq.plans || []).map((plan, planIndex) => (
+                                  <div key={plan.id} className="flex items-center gap-3 rounded-lg bg-secondary/30 p-3">
+                                    <div className="flex-1 grid grid-cols-2 gap-3">
+                                      <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">Texto do Botao</Label>
+                                        <Input
+                                          value={plan.buttonText}
+                                          onChange={(e) => {
+                                            const updatedPlans = [...(seq.plans || [])]
+                                            updatedPlans[planIndex] = { ...plan, buttonText: e.target.value }
+                                            handleUpdateUpsellSequence(seq.id, "plans", updatedPlans)
+                                          }}
+                                          placeholder="Ex: Mensal - R$ 29,90"
+                                          className="bg-secondary/50 border-border/50"
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">Preco (R$)</Label>
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          value={plan.price === 0 ? "" : plan.price}
+                                          onChange={(e) => {
+                                            const updatedPlans = [...(seq.plans || [])]
+                                            updatedPlans[planIndex] = { ...plan, price: e.target.value === "" ? 0 : parseFloat(e.target.value) }
+                                            handleUpdateUpsellSequence(seq.id, "plans", updatedPlans)
+                                          }}
+                                          placeholder="0,00"
+                                          className="bg-secondary/50 border-border/50"
+                                        />
+                                      </div>
+                                    </div>
+                                    {(seq.plans || []).length > 1 && (
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          const updatedPlans = (seq.plans || []).filter((_, i) => i !== planIndex)
+                                          handleUpdateUpsellSequence(seq.id, "plans", updatedPlans)
+                                        }}
+                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    )}
                                   </div>
-                                </div>
-                                <div className="space-y-2">
-                                  <Label className="text-sm text-muted-foreground">Botao Recusar</Label>
-                                  <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-3">
-                                    <X className="h-4 w-4 text-destructive" />
-                                    <Input
-                                      value={seq.rejectButtonText}
-                                      onChange={(e) => handleUpdateUpsellSequence(seq.id, "rejectButtonText", e.target.value)}
-                                      className="bg-transparent border-0 p-0 h-auto focus-visible:ring-0"
-                                    />
-                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="border-t border-border/50 pt-4" />
+
+                            {/* Botao de Recusar */}
+                            <div className="space-y-3">
+                              <h4 className="font-medium">Botao de Recusar</h4>
+                              <div className="space-y-2">
+                                <Label className="text-sm text-muted-foreground">Texto do Botao</Label>
+                                <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-3">
+                                  <X className="h-4 w-4 text-destructive" />
+                                  <Input
+                                    value={seq.rejectButtonText}
+                                    onChange={(e) => handleUpdateUpsellSequence(seq.id, "rejectButtonText", e.target.value)}
+                                    className="bg-transparent border-0 p-0 h-auto focus-visible:ring-0"
+                                  />
                                 </div>
                               </div>
                               <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-3">
                                 <div>
                                   <p className="text-sm font-medium">Esconder botao de recusar</p>
-                                  <p className="text-xs text-muted-foreground">Mostra apenas o botao de aceitar</p>
+                                  <p className="text-xs text-muted-foreground">Mostra apenas os planos</p>
                                 </div>
                                 <Switch
                                   checked={seq.hideRejectButton}
@@ -2815,57 +2873,11 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
                                   </div>
                                 )}
 
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <DollarSign className="h-4 w-4" />
-                                    <span>Preco:</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-sm text-muted-foreground">R$</span>
-                                    <Input
-                                      type="number"
-                                      value={seq.price === 0 ? "" : seq.price}
-                                      onChange={(e) => {
-                                        handleUpdateDownsellSequence(seq.id, "price", e.target.value === "" ? 0 : parseFloat(e.target.value))
-                                      }}
-                                      className="w-28 bg-secondary/50 border-border/50"
-                                      min={0}
-                                      step="0.01"
-                                    />
-                                  </div>
-                                </div>
                               </div>
 
                               {/* Mensagem */}
                               <div className="space-y-2">
                                 <Label>Mensagem <span className="text-destructive">*</span></Label>
-                                <div className="flex items-center gap-1 border-b border-border/50 pb-2">
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Bold className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Italic className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Underline className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Strikethrough className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Code className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <LinkIcon className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Quote className="h-4 w-4" />
-                                  </Button>
-                                  <div className="w-px h-4 bg-border/50 mx-1" />
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Smile className="h-4 w-4" />
-                                  </Button>
-                                </div>
                                 <Textarea
                                   value={seq.message}
                                   onChange={(e) => handleUpdateDownsellSequence(seq.id, "message", e.target.value)}
@@ -2874,6 +2886,110 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
                                   className="bg-secondary/30 border-border/50"
                                 />
                                 <p className="text-xs text-muted-foreground text-right">{seq.message.length}/4000 caracteres</p>
+                              </div>
+
+                              <div className="border-t border-border/50 pt-4" />
+
+                              {/* Planos do Downsell */}
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-medium">Planos</h4>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const newPlan = { id: `plan-${Date.now()}`, buttonText: "Novo plano", price: 0 }
+                                      handleUpdateDownsellSequence(seq.id, "plans", [...(seq.plans || []), newPlan])
+                                    }}
+                                    className="h-8"
+                                  >
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    Adicionar Plano
+                                  </Button>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  Adicione os planos que serao exibidos como botoes para o usuario escolher.
+                                </p>
+                                <div className="space-y-3">
+                                  {(seq.plans || []).map((plan, planIndex) => (
+                                    <div key={plan.id} className="flex items-center gap-3 rounded-lg bg-secondary/30 p-3">
+                                      <div className="flex-1 grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                          <Label className="text-xs text-muted-foreground">Texto do Botao</Label>
+                                          <Input
+                                            value={plan.buttonText}
+                                            onChange={(e) => {
+                                              const updatedPlans = [...(seq.plans || [])]
+                                              updatedPlans[planIndex] = { ...plan, buttonText: e.target.value }
+                                              handleUpdateDownsellSequence(seq.id, "plans", updatedPlans)
+                                            }}
+                                            placeholder="Ex: Mensal - R$ 19,90"
+                                            className="bg-secondary/50 border-border/50"
+                                          />
+                                        </div>
+                                        <div className="space-y-1">
+                                          <Label className="text-xs text-muted-foreground">Preco (R$)</Label>
+                                          <Input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={plan.price === 0 ? "" : plan.price}
+                                            onChange={(e) => {
+                                              const updatedPlans = [...(seq.plans || [])]
+                                              updatedPlans[planIndex] = { ...plan, price: e.target.value === "" ? 0 : parseFloat(e.target.value) }
+                                              handleUpdateDownsellSequence(seq.id, "plans", updatedPlans)
+                                            }}
+                                            placeholder="0,00"
+                                            className="bg-secondary/50 border-border/50"
+                                          />
+                                        </div>
+                                      </div>
+                                      {(seq.plans || []).length > 1 && (
+                                        <Button
+                                          type="button"
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() => {
+                                            const updatedPlans = (seq.plans || []).filter((_, i) => i !== planIndex)
+                                            handleUpdateDownsellSequence(seq.id, "plans", updatedPlans)
+                                          }}
+                                          className="h-8 w-8 text-destructive hover:text-destructive"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="border-t border-border/50 pt-4" />
+
+                              {/* Botao de Recusar */}
+                              <div className="space-y-3">
+                                <h4 className="font-medium">Botao de Recusar</h4>
+                                <div className="space-y-2">
+                                  <Label className="text-sm text-muted-foreground">Texto do Botao</Label>
+                                  <div className="flex items-center gap-2 rounded-lg bg-secondary/30 p-3">
+                                    <X className="h-4 w-4 text-destructive" />
+                                    <Input
+                                      value={seq.rejectButtonText || "Nao tenho interesse"}
+                                      onChange={(e) => handleUpdateDownsellSequence(seq.id, "rejectButtonText", e.target.value)}
+                                      className="bg-transparent border-0 p-0 h-auto focus-visible:ring-0"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-3">
+                                  <div>
+                                    <p className="text-sm font-medium">Esconder botao de recusar</p>
+                                    <p className="text-xs text-muted-foreground">Mostra apenas os planos</p>
+                                  </div>
+                                  <Switch
+                                    checked={seq.hideRejectButton || false}
+                                    onCheckedChange={(checked) => handleUpdateDownsellSequence(seq.id, "hideRejectButton", checked)}
+                                  />
+                                </div>
                               </div>
 
                               <div className="border-t border-border/50 pt-4" />

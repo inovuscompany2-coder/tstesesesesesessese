@@ -742,8 +742,21 @@ async function processUpdate(botId: string, update: Record<string, unknown>) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const metadata = userState.metadata as Record<string, any> | null
         const currentUpsellIndex = metadata?.upsell_index || 0
-        const upsellPrice = metadata?.upsell_price || 0
+        const upsellPlans = metadata?.upsell_plans || []
         const upsellName = metadata?.upsell_name || "Upsell"
+        
+        // Extrair preco do plano selecionado do callback_data
+        // Formato: up_accept_{price}_{upsellIndex}_{planIndex}
+        let upsellPrice = 0
+        let selectedPlanName = upsellName
+        if (isAccept) {
+          const parts = callbackData.replace("up_accept_", "").split("_")
+          upsellPrice = parseFloat(parts[0]) || 0
+          const planIndex = parseInt(parts[2]) || 0
+          if (upsellPlans[planIndex]) {
+            selectedPlanName = upsellPlans[planIndex].buttonText || upsellName
+          }
+        }
 
         // Buscar config do fluxo
         const { data: flowData } = await supabase
@@ -787,7 +800,7 @@ async function processUpdate(botId: string, update: Record<string, unknown>) {
               },
               body: JSON.stringify({
                 transaction_amount: upsellPrice,
-                description: upsellName,
+                description: selectedPlanName,
                 payment_method_id: "pix",
                 payer: {
                   email: `user${telegramUserId}@telegram.bot`,
@@ -875,7 +888,7 @@ async function processUpdate(botId: string, update: Record<string, unknown>) {
                 metadata: {
                   upsell_index: nextIndex,
                   upsell_name: nextUpsell.name,
-                  upsell_price: nextUpsell.price,
+                  upsell_plans: nextUpsell.plans || [],
                 },
                 updated_at: new Date().toISOString(),
               })
@@ -896,20 +909,28 @@ async function processUpdate(botId: string, update: Record<string, unknown>) {
                 }
               }
 
-              // Montar botoes
+              // Montar botoes com planos
+              const upsellPlans = nextUpsell.plans || []
               const inlineKeyboard: { inline_keyboard: { text: string; callback_data: string }[][] } = {
-                inline_keyboard: [
-                  [{ text: nextUpsell.acceptButtonText || "Quero essa oferta!", callback_data: `up_accept_${nextUpsell.price}_${nextIndex}` }]
-                ]
+                inline_keyboard: []
               }
 
+              // Adicionar cada plano como um botao
+              for (let i = 0; i < upsellPlans.length; i++) {
+                const plan = upsellPlans[i]
+                inlineKeyboard.inline_keyboard.push([
+                  { text: plan.buttonText || `Plano ${i + 1}`, callback_data: `up_accept_${plan.price}_${nextIndex}_${i}` }
+                ])
+              }
+
+              // Botao de recusar (se nao estiver oculto)
               if (!nextUpsell.hideRejectButton) {
                 inlineKeyboard.inline_keyboard.push([
                   { text: nextUpsell.rejectButtonText || "Nao tenho interesse", callback_data: `up_decline_${nextIndex}` }
                 ])
               }
 
-              const message = nextUpsell.message || `Oferta especial: ${nextUpsell.name}\n\nValor: R$ ${(nextUpsell.price || 0).toFixed(2).replace(".", ",")}`
+              const message = nextUpsell.message || `Oferta especial: ${nextUpsell.name}`
               await sendTelegramMessage(botToken, chatId, message, inlineKeyboard)
             }
           } else {
