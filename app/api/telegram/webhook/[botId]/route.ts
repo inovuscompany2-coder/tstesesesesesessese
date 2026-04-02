@@ -1196,7 +1196,21 @@ async function processUpdate(botId: string, update: Record<string, unknown>) {
               undefined
             )
             
-            // Enviar oferta do Order Bump
+            // Enviar midias do Order Bump (se houver)
+            const orderBumpMedias = orderBumpInicial.medias as string[] | undefined
+            if (orderBumpMedias && orderBumpMedias.length > 0) {
+              console.log("[v0] Order Bump - Enviando", orderBumpMedias.length, "midia(s)")
+              for (const mediaUrl of orderBumpMedias) {
+                const isVideo = mediaUrl.includes(".mp4") || mediaUrl.includes(".mov") || mediaUrl.includes(".webm")
+                if (isVideo) {
+                  await sendTelegramVideo(botToken, chatId, mediaUrl, "")
+                } else {
+                  await sendTelegramPhoto(botToken, chatId, mediaUrl, "")
+                }
+              }
+            }
+            
+            // Enviar oferta do Order Bump (texto + botoes)
             await sendTelegramMessage(botToken, chatId, orderBumpDesc, orderBumpKeyboard)
             
             // Salvar estado para quando usuario responder
