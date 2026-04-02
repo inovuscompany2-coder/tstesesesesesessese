@@ -1923,8 +1923,8 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
                                     <Label className="text-muted-foreground">Preco (R$)</Label>
                                     <Input
                                       type="number"
-                                      value={plan.price}
-                                      onChange={(e) => handleUpdatePlan(plan.id, "price", parseFloat(e.target.value) || 0)}
+                                      value={plan.price === 0 ? "" : plan.price}
+                                      onChange={(e) => handleUpdatePlan(plan.id, "price", e.target.value === "" ? 0 : parseFloat(e.target.value))}
                                       placeholder="0"
                                       className="bg-secondary/50"
                                     />
@@ -2401,8 +2401,8 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
                                     type="number"
                                     min="0"
                                     step="0.01"
-                                    value={seq.price || 0}
-                                    onChange={(e) => handleUpdateUpsellSequence(seq.id, "price", parseFloat(e.target.value) || 0)}
+                                    value={seq.price === 0 ? "" : seq.price}
+                                    onChange={(e) => handleUpdateUpsellSequence(seq.id, "price", e.target.value === "" ? 0 : parseFloat(e.target.value))}
                                     className="w-32 pl-10 bg-secondary/50 border-border/50"
                                     placeholder="0,00"
                                   />
@@ -2824,9 +2824,9 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
                                     <span className="text-sm text-muted-foreground">R$</span>
                                     <Input
                                       type="number"
-                                      value={seq.price || 0}
+                                      value={seq.price === 0 ? "" : seq.price}
                                       onChange={(e) => {
-                                        handleUpdateDownsellSequence(seq.id, "price", parseFloat(e.target.value) || 0)
+                                        handleUpdateDownsellSequence(seq.id, "price", e.target.value === "" ? 0 : parseFloat(e.target.value))
                                       }}
                                       className="w-28 bg-secondary/50 border-border/50"
                                       min={0}
@@ -3055,9 +3055,9 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
                           <Label className="text-muted-foreground">Preco (R$)</Label>
                           <Input
                             type="number"
-                            value={orderBumpInicial.price}
+                            value={orderBumpInicial.price === 0 ? "" : orderBumpInicial.price}
                             onChange={(e) => {
-                              setOrderBumpInicial({...orderBumpInicial, price: parseFloat(e.target.value) || 0})
+                              setOrderBumpInicial({...orderBumpInicial, price: e.target.value === "" ? 0 : parseFloat(e.target.value)})
                               setHasChanges(true)
                             }}
                             placeholder="0"
@@ -3208,7 +3208,7 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
                         </div>
                         <div className="space-y-2">
                           <Label className="text-muted-foreground">Preco (R$)</Label>
-                          <Input type="number" value={orderBumpUpsell.price} onChange={(e) => { setOrderBumpUpsell({...orderBumpUpsell, price: parseFloat(e.target.value) || 0}); setHasChanges(true) }} className="bg-secondary/50" />
+                          <Input type="number" value={orderBumpUpsell.price === 0 ? "" : orderBumpUpsell.price} onChange={(e) => { setOrderBumpUpsell({...orderBumpUpsell, price: e.target.value === "" ? 0 : parseFloat(e.target.value)}); setHasChanges(true) }} className="bg-secondary/50" />
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -3284,7 +3284,7 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
                         </div>
                         <div className="space-y-2">
                           <Label className="text-muted-foreground">Preco (R$)</Label>
-                          <Input type="number" value={orderBumpDownsell.price} onChange={(e) => { setOrderBumpDownsell({...orderBumpDownsell, price: parseFloat(e.target.value) || 0}); setHasChanges(true) }} className="bg-secondary/50" />
+                          <Input type="number" value={orderBumpDownsell.price === 0 ? "" : orderBumpDownsell.price} onChange={(e) => { setOrderBumpDownsell({...orderBumpDownsell, price: e.target.value === "" ? 0 : parseFloat(e.target.value)}); setHasChanges(true) }} className="bg-secondary/50" />
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -3360,7 +3360,7 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
                         </div>
                         <div className="space-y-2">
                           <Label className="text-muted-foreground">Preco (R$)</Label>
-                          <Input type="number" value={orderBumpPacks.price} onChange={(e) => { setOrderBumpPacks({...orderBumpPacks, price: parseFloat(e.target.value) || 0}); setHasChanges(true) }} className="bg-secondary/50" />
+                          <Input type="number" value={orderBumpPacks.price === 0 ? "" : orderBumpPacks.price} onChange={(e) => { setOrderBumpPacks({...orderBumpPacks, price: e.target.value === "" ? 0 : parseFloat(e.target.value)}); setHasChanges(true) }} className="bg-secondary/50" />
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -3563,8 +3563,8 @@ setRedirectButtonEnabled(config.redirectButton?.enabled || false)
                                 <Label className="text-muted-foreground">Preco (R$)</Label>
                                 <Input
                                   type="number"
-                                  value={pack.price}
-                                  onChange={(e) => handleUpdatePack(pack.id, "price", parseFloat(e.target.value) || 0)}
+                                  value={pack.price === 0 ? "" : pack.price}
+                                  onChange={(e) => handleUpdatePack(pack.id, "price", e.target.value === "" ? 0 : parseFloat(e.target.value))}
                                   placeholder="0"
                                   className="bg-secondary/50"
                                 />
