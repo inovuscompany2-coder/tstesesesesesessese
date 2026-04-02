@@ -220,7 +220,7 @@ export default function DashboardPage() {
         {/* Content Header */}
         <div className="flex flex-row items-end justify-between mb-6 gap-4">
           <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            Painel Analítico
+            Painel Analítico v2
           </h1>
           <div className="flex items-center gap-3">
             <Popover>
